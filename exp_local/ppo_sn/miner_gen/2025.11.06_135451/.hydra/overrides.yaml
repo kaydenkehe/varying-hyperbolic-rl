@@ -1,0 +1,2 @@
+- agent@_global_=onpolicy/ppo_sn
+- env@_global_=gen/miner

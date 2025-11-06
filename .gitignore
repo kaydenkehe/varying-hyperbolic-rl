@@ -1,5 +1,5 @@
 .ipynb_checkpoints
-exp_*
+# exp_*
 *.ipynb
 .idea
 *__pycache__/
