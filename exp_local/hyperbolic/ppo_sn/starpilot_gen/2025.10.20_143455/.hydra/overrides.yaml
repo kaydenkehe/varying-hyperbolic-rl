@@ -1,0 +1,2 @@
+- agent=onpolicy/hyperbolic/ppo
+- env=gen/starpilot
