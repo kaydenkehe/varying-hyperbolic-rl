@@ -16,8 +16,7 @@ from hydra import initialize, compose
 
 # --- CONFIG: Modify these as needed ---
 CKPT = (
-    # Example: update to your checkpoint path
-    "exp_local/hyperbolic/ppo_sn/bigfish_gen/2025.11.06_080602/checkpoint-19660800.pt"
+    "exp_local/hyperbolic/ppo_sn/bigfish_gen/2025.11.06_080602/checkpoint-9830400.pt"
 )
 AGENT_CFG = "onpolicy/hyperbolic/ppo"  # or "onpolicy/ppo"
 ENV_CFG = "gen/bigfish"                 # e.g., gen/caveflyer, gen/ninja
