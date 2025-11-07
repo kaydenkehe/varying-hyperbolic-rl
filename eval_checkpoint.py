@@ -51,8 +51,8 @@ def main() -> None:
     cfg_dir = str((Path(__file__).parent / "cfgs").resolve())
     with initialize_config_dir(version_base=None, config_dir=cfg_dir):
         overrides = [
-            f"agent={AGENT_CFG}",
-            f"env={ENV_CFG}",
+            f"agent@_global_={AGENT_CFG}",
+            f"env@_global_={ENV_CFG}",
             f"n_eval_envs={N_EPISODES}",  # tester.min_eval_episodes mirrors this
             f"disable_cuda={'true' if DISABLE_CUDA else 'false'}",
         ] + list(EXTRA_OVERRIDES)

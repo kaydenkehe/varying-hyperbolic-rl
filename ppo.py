@@ -65,7 +65,7 @@ class PPO():
         return checkpoint
 
     def load(self, path):
-        params = th.load(path)
+        params = th.load(path, weights_only=False)
         self.ac_model.load_state_dict(params['agent'])
         self.optimizer.load_state_dict(params['optimizer'])
         if 'preprocessor' in params:
