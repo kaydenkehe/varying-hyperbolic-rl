@@ -11,18 +11,20 @@ import sys
 from statistics import mean, pstdev
 from pathlib import Path
 from typing import Sequence
+import yaml
 
 from hydra import initialize_config_dir, compose
 
 # --- CONFIG: Modify these as needed ---
 CKPT = (
-    #"exp_local/hyperbolic/ppo_sn/bigfish_gen/2025.11.06_080602/checkpoint-22937600.pt"
+    # "exp_local/hyperbolic/ppo_sn/bigfish_gen/2025.11.06_080602/checkpoint-22937600.pt"
     "exp_local/ppo_sn/bigfish_gen/2025.11.06_080610/checkpoint-22937600.pt"
-    #"exp_local/hyperbolic/ppo_sn/caveflyer_gen/2025.11.07_012323/checkpoint-22937600.pt"
+    # "exp_local/hyperbolic/ppo_sn/caveflyer_gen/2025.11.07_012323/checkpoint-22937600.pt"
 )
-AGENT_CFG = "onpolicy/ppo"  # or "onpolicy/ppo"
-ENV_CFG = "gen/bigfish"                 # e.g., gen/caveflyer, gen/ninja
-N_EPISODES = 30                          # match training logs by default
+INFER_FROM_RUN = True                    # infer agent/env from run's .hydra/config.yaml
+AGENT_CFG = "onpolicy/ppo"               # fallback if inference fails
+ENV_CFG = "gen/bigfish"                  # fallback env (e.g., gen/caveflyer)
+N_EPISODES = 30                           # match training logs by default
 DET = False                              # match training (stochastic) by default
 DISABLE_CUDA = False                     # set True to force CPU
 # Optional extra Hydra overrides, e.g. to fix seeds/levels
@@ -49,12 +51,35 @@ def main() -> None:
         print(f"Checkpoint not found: {ckpt_path}")
         sys.exit(1)
 
+    # Try to infer agent/env groups from the run's saved config to avoid arch mismatches
+    inferred_agent_cfg = None
+    inferred_env_cfg = None
+    if INFER_FROM_RUN:
+        run_cfg = ckpt_path.parent / ".hydra" / "config.yaml"
+        if run_cfg.exists():
+            try:
+                with open(run_cfg, "r") as f:
+                    cfg_y = yaml.safe_load(f)
+                agent_name = str(cfg_y.get("agent_name", ""))
+                env_name = str(cfg_y.get("env_name", ""))
+                # Map saved agent_name to our Hydra group path
+                if "hyperbolic" in agent_name:
+                    inferred_agent_cfg = "onpolicy/hyperbolic/ppo"
+                elif agent_name == "ppo_sn":
+                    inferred_agent_cfg = "onpolicy/ppo_sn"
+                elif agent_name:
+                    inferred_agent_cfg = "onpolicy/ppo"
+                if env_name:
+                    inferred_env_cfg = f"gen/{env_name}"
+            except Exception as e:
+                print(f"Warning: failed to infer config from {run_cfg}: {e}")
+
     # Use absolute config directory so the script works from any CWD
     cfg_dir = str((Path(__file__).parent / "cfgs").resolve())
     with initialize_config_dir(version_base=None, config_dir=cfg_dir):
         overrides = [
-            f"agent@_global_={AGENT_CFG}",
-            f"env@_global_={ENV_CFG}",
+            f"agent@_global_={inferred_agent_cfg or AGENT_CFG}",
+            f"env@_global_={inferred_env_cfg or ENV_CFG}",
             f"n_eval_envs={N_EPISODES}",  # tester.min_eval_episodes mirrors this
             f"disable_cuda={'true' if DISABLE_CUDA else 'false'}",
         ] + list(EXTRA_OVERRIDES)
