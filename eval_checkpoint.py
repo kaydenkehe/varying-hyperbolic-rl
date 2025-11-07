@@ -20,9 +20,12 @@ CKPT = (
 )
 AGENT_CFG = "onpolicy/hyperbolic/ppo"  # or "onpolicy/ppo"
 ENV_CFG = "gen/bigfish"                 # e.g., gen/caveflyer, gen/ninja
-N_EPISODES = 30                          # number of evaluation episodes
-DET = True                               # deterministic actions (argmax)
+N_EPISODES = 10                          # match training logs by default
+DET = False                              # match training (stochastic) by default
 DISABLE_CUDA = False                     # set True to force CPU
+# Optional extra Hydra overrides, e.g. to fix seeds/levels
+# Example: EXTRA_OVERRIDES = ["eval_env.start_level=0", "eval_env.num_levels=200"]
+EXTRA_OVERRIDES = []
 # --------------------------------------
 
 
@@ -47,14 +50,16 @@ def main() -> None:
     # Use absolute config directory so the script works from any CWD
     cfg_dir = str((Path(__file__).parent / "cfgs").resolve())
     with initialize_config_dir(version_base=None, config_dir=cfg_dir):
+        overrides = [
+            f"agent={AGENT_CFG}",
+            f"env={ENV_CFG}",
+            f"n_eval_envs={N_EPISODES}",  # tester.min_eval_episodes mirrors this
+            f"disable_cuda={'true' if DISABLE_CUDA else 'false'}",
+        ] + list(EXTRA_OVERRIDES)
+
         cfg = compose(
             config_name="config",
-            overrides=[
-                f"agent={AGENT_CFG}",
-                f"env={ENV_CFG}",
-                f"n_eval_envs={N_EPISODES}",  # tester.min_eval_episodes mirrors this
-                f"disable_cuda={'true' if DISABLE_CUDA else 'false'}",
-            ],
+            overrides=overrides,
         )
 
     agent, buffer, env, tester, preproc = make_models(cfg)
