@@ -16,11 +16,13 @@ from hydra import initialize_config_dir, compose
 
 # --- CONFIG: Modify these as needed ---
 CKPT = (
-    "exp_local/hyperbolic/ppo_sn/bigfish_gen/2025.11.06_080602/checkpoint-9830400.pt"
+    #"exp_local/hyperbolic/ppo_sn/bigfish_gen/2025.11.06_080602/checkpoint-22937600.pt"
+    "exp_local/ppo_sn/bigfish_gen/2025.11.06_080610/checkpoint-22937600.pt"
+    #"exp_local/hyperbolic/ppo_sn/caveflyer_gen/2025.11.07_012323/checkpoint-22937600.pt"
 )
-AGENT_CFG = "onpolicy/hyperbolic/ppo"  # or "onpolicy/ppo"
+AGENT_CFG = "onpolicy/ppo"  # or "onpolicy/ppo"
 ENV_CFG = "gen/bigfish"                 # e.g., gen/caveflyer, gen/ninja
-N_EPISODES = 10                          # match training logs by default
+N_EPISODES = 30                          # match training logs by default
 DET = False                              # match training (stochastic) by default
 DISABLE_CUDA = False                     # set True to force CPU
 # Optional extra Hydra overrides, e.g. to fix seeds/levels
