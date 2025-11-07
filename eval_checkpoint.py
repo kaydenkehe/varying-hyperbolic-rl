@@ -12,7 +12,7 @@ from statistics import mean, pstdev
 from pathlib import Path
 from typing import Sequence
 
-from hydra import initialize, compose
+from hydra import initialize_config_dir, compose
 
 # --- CONFIG: Modify these as needed ---
 CKPT = (
@@ -44,7 +44,9 @@ def main() -> None:
         print(f"Checkpoint not found: {ckpt_path}")
         sys.exit(1)
 
-    with initialize(version_base=None, config_path=str(Path(__file__).parents[1] / "cfgs")):
+    # Use absolute config directory so the script works from any CWD
+    cfg_dir = str((Path(__file__).parent / "cfgs").resolve())
+    with initialize_config_dir(version_base=None, config_dir=cfg_dir):
         cfg = compose(
             config_name="config",
             overrides=[
@@ -76,4 +78,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
