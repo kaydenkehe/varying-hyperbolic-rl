@@ -18,12 +18,21 @@ from hydra import initialize_config_dir, compose
 # --- CONFIG: Modify these as needed ---
 CKPT = (
     # "exp_local/hyperbolic/ppo_sn/bigfish_gen/2025.11.06_080602/checkpoint-22937600.pt"
-    "exp_local/ppo_sn/bigfish_gen/2025.11.06_080610/checkpoint-22937600.pt"
+    # "exp_local/ppo_sn/bigfish_gen/2025.11.06_080610/checkpoint-22937600.pt"
     # "exp_local/hyperbolic/ppo_sn/caveflyer_gen/2025.11.07_012323/checkpoint-22937600.pt"
+    # "exp_local/ppo_sn/caveflyer_gen/2025.11.06_180159/checkpoint-22937600.pt"
+    # "exp_local/hyperbolic/ppo_sn/dodgeball_gen/2025.11.06_110816/checkpoint-22937600.pt"
+    # "exp_local/ppo_sn/dodgeball_gen/2025.11.06_095342/checkpoint-22937600.pt"
+    # "exp_local/hyperbolic/ppo_sn/jumper_gen/2025.11.06_135738/checkpoint-22937600.pt"
+    # "exp_local/ppo_sn/jumper_gen/2025.11.06_115254/checkpoint-22937600.pt"
+    # "exp_local/hyperbolic/ppo_sn/miner_gen/2025.11.06_164736/checkpoint-22937600.pt"
+    # "exp_local/ppo_sn/miner_gen/2025.11.06_135451/checkpoint-22937600.pt"
+    # "exp_local/hyperbolic/ppo_sn/ninja_gen/2025.11.06_205244/checkpoint-22937600.pt"
+    "exp_local/ppo_sn/ninja_gen/2025.11.06_160258/checkpoint-22937600.pt"
 )
 INFER_FROM_RUN = True                    # infer agent/env from run's .hydra/config.yaml
 AGENT_CFG = "onpolicy/ppo"               # fallback if inference fails
-ENV_CFG = "gen/bigfish"                  # fallback env (e.g., gen/caveflyer)
+ENV_CFG = "gen/ninja"                  # fallback env (e.g., gen/caveflyer)
 N_EPISODES = 30                           # match training logs by default
 DET = False                              # match training (stochastic) by default
 DISABLE_CUDA = False                     # set True to force CPU
