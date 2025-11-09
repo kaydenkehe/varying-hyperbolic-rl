@@ -11,6 +11,13 @@ import numpy as np
 import torch
 from hydra import compose, initialize_config_dir
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+import sys
+
+if str(REPO_ROOT) not in sys.path:
+    sys.path.append(str(REPO_ROOT))
+
 from curvature.clustering import run_kmeans, whiten_features
 from curvature.coverage import CoverageCollector, CoverageHyperParams
 from curvature.features import SharedRepresentationExtractor
@@ -20,7 +27,6 @@ from curvature.pairs import PairSampler
 from main_hydra import make_models
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
 CFG_DIR = REPO_ROOT / "cfgs"
 
 
