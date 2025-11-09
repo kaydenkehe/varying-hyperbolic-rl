@@ -29,6 +29,8 @@ agent:
       rescale_euclidean_norms_gain: 1.0
       rescale_normal_params: true
       effective_softmax_rescale: 0.5
+      # Pass global curvature (c) into hyperbolic layer
+      c: ${curvature}
   optimizer:
     _target_: utils_hyp.geoopt.optim.RiemannianAdam
     lr: 5e-4

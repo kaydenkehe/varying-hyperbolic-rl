@@ -18,6 +18,10 @@ action_size: ???
 action_scale: ???
 logging_folder: exp_local
 
+# Global hyperparams
+# Default curvature magnitude for hyperbolic components (c > 0)
+curvature: 1.0
+
 save_weights_every: 200
 disable_cuda: false
 
