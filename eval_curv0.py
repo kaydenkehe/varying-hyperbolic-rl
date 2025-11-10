@@ -41,7 +41,8 @@ from main_hydra import make_models
 class EvalConfig:
     curv0_root: Path = Path("results/curv0")
     base_csv: Path = Path("results/results.csv")
-    out_csv: Path = Path("results/results_with_c0.csv")
+    # Write the augmented CSV inside the curv0 directory
+    out_csv: Path = Path("results/curv0/results.csv")
     episodes: int = 100  # default evaluation episodes
     det: bool = False    # stochastic policy by default (match training)
     force_cpu: bool = False
@@ -168,17 +169,32 @@ def run(cfg: EvalConfig) -> None:
 
     # Load base CSV and append c=0 columns
     base_header, base_rows = _read_base_csv(cfg.base_csv)
-    out_header = list(base_header) + ["c=0 Mean", "c=0 Std"]
+    # Remove Percent Change column if present
+    percent_idx: Optional[int] = None
+    for i, h in enumerate(base_header):
+        if h.strip().lower() == "percent change":
+            percent_idx = i
+            break
+
+    if percent_idx is not None:
+        header_wo_pct = base_header[:percent_idx] + base_header[percent_idx + 1 :]
+    else:
+        header_wo_pct = list(base_header)
+
+    out_header = header_wo_pct + ["c=0 Mean", "c=0 Std"]
 
     out_rows: List[List[str]] = []
     for row in base_rows:
         if not row:
             continue
-        task = row[0]
+        row_effective = (
+            row[:percent_idx] + row[percent_idx + 1 :] if percent_idx is not None else row
+        )
+        task = row_effective[0]
         mu, sd = c0_scores.get(task, (float("nan"), float("nan")))
         mu_s = f"{mu:.2f}" if math.isfinite(mu) else "nan"
         sd_s = f"{sd:.2f}" if math.isfinite(sd) else "nan"
-        out_rows.append(row + [mu_s, sd_s])
+        out_rows.append(row_effective + [mu_s, sd_s])
 
     _write_augmented_csv(cfg.out_csv, out_header, out_rows)
     print(f"Wrote augmented CSV to: {cfg.out_csv}")
@@ -217,4 +233,3 @@ def _parse_args(argv: List[str]) -> EvalConfig:
 if __name__ == "__main__":
     args = _parse_args(sys.argv[1:])
     run(args)
-
