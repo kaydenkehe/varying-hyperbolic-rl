@@ -1,0 +1,3 @@
+- agent@_global_=onpolicy/hyperbolic/ppo
+- env@_global_=gen/miner
+- curvature=0.0

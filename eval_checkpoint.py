@@ -47,11 +47,19 @@ MODELS: Dict[str, Dict[str, str]] = {
         "hppo": "exp_local/hyperbolic/ppo_sn/ninja_gen/2025.11.06_205244/checkpoint-22937600.pt",
         "ppo":  "exp_local/ppo_sn/ninja_gen/2025.11.06_160258/checkpoint-22937600.pt",
     },
+    "leaper": {
+        "hppo": "exp_local/hyperbolic/ppo_sn/leaper_gen/2025.11.09_131838/checkpoint-22937600.pt",
+        "ppo": "exp_local/ppo_sn/leaper_gen/2025.11.09_055056/checkpoint-22937600.pt",
+    },
+    "climber": {
+        "hppo": "exp_local/hyperbolic/ppo_sn/climber_gen/2025.11.09_145945/checkpoint-22937600.pt", 
+        "ppo": "exp_local/ppo_sn/climber_gen/2025.11.09_075754/checkpoint-22937600.pt", 
+    }
 }
 INFER_FROM_RUN = True                    # infer agent/env from run's .hydra/config.yaml
 AGENT_CFG = "onpolicy/ppo"               # fallback if inference fails
 ENV_CFG = "gen/ninja"                    # fallback env (e.g., gen/caveflyer)
-N_EPISODES = 100                          # default evaluation episodes (can override with --episodes)
+N_EPISODES = 1000                          # default evaluation episodes (can override with --episodes)
 DET = False                              # match training (stochastic) by default
 DISABLE_CUDA = False                     # set True to force CPU
 # Optional extra Hydra overrides, e.g. to fix seeds/levels
@@ -188,7 +196,7 @@ def main() -> None:
     # Use absolute config directory so the script works from any CWD
     cfg_dir = str((Path(__file__).parent / "cfgs").resolve())
     results: Dict[str, Dict[str, Tuple[float, float]]] = {}
-    tasks_in_order = ["bigfish", "caveflyer", "dodgeball", "jumper", "miner", "ninja"]
+    tasks_in_order = ["bigfish", "dodgeball", "climber", "leaper", "miner", "jumper", "caveflyer", "ninja"]
 
     with initialize_config_dir(version_base=None, config_dir=cfg_dir):
         # Evaluate all checkpoints

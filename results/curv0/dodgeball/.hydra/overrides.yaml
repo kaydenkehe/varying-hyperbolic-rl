@@ -1,0 +1,3 @@
+- agent@_global_=onpolicy/hyperbolic/ppo
+- env@_global_=gen/dodgeball
+- curvature=0.0

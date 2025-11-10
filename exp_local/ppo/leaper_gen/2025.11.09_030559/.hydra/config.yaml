@@ -1,0 +1,97 @@
+tester:
+  _target_: testers.ModularTester
+  eval_env_cfg: ${eval_env}
+  preprocessor: null
+  max_eval_timesteps: 1000000.0
+  min_eval_episodes: ${n_eval_envs}
+  train_env_cfg: ${env}
+device: ???
+obs_dims: ???
+act_dims: ???
+n_actions: ???
+action_size: ???
+action_scale: ???
+logging_folder: exp_local
+save_weights_every: 200
+disable_cuda: false
+n_envs: 64
+n_eval_envs: 10
+distribution_mode: easy
+env_log_name: ${env_name}_gen
+env:
+  _target_: env.procgen.ProcgenGym3Env
+  num: ${n_envs}
+  env_name: ${env_name}
+  distribution_mode: ${distribution_mode}
+  num_levels: 200
+eval_env:
+  _target_: env.procgen.ProcgenGym3Env
+  num: ${n_eval_envs}
+  env_name: ${env_name}
+  distribution_mode: ${distribution_mode}
+env_name: leaper
+ret_min: 3
+ret_max: 10
+batch_size: 2048
+steps_per_rollout: 256
+training_fn:
+  _target_: onpolicy_training.run_training
+  agent: null
+  buffer: null
+  env: null
+  tester: null
+  preprocessor: null
+  total_steps: 25000000
+  steps_per_rollout: ${steps_per_rollout}
+  n_envs: ${n_envs}
+  train_epochs_per_iteration: 3
+  log_frequency: 4
+  batch_size: ${batch_size}
+  save_weights_every: ${save_weights_every}
+preprocessor:
+  _target_: utils.Preprocessor
+  device: ${device}
+  reward_pre: normalization_backwards
+  observation_pre: dequantization
+  obs_dims: ${obs_dims}
+  observation_clip: 10
+  reward_clip: 10
+  gamma: ${gamma}
+buffer:
+  _target_: buffers.RolloutBuffer
+  device: ${device}
+  buffer_size: ${steps_per_rollout}
+  obs_dims: ${obs_dims}
+  act_dims: ${act_dims}
+  use_gae: true
+  preprocessor: null
+  n_envs: ${n_envs}
+  gamma: ${gamma}
+  lambd: 0.95
+agent_name: ppo
+agent:
+  _target_: ppo.ModularPPO
+  device: ${device}
+  actor_critic_model:
+    _target_: online_actor_critics.DiscreteActorCritic
+    modules:
+      _target_: custom_networks.make_impala_modules
+      obs_dims: ${obs_dims}
+      n_actions: ${n_actions}
+      channels:
+      - 16
+      - 32
+      - 32
+      hidden_units: 256
+      shared_conv_trunk: true
+      shared_fc_head: true
+  optimizer:
+    _target_: ppo.th.optim.Adam
+    lr: 0.0005
+    eps: 1.0e-05
+  clipping: 0.2
+  value_clipping: 0.2
+  ent_coeff: 0.01
+  val_coeff: 0.5
+  max_gradient_norm: 0.5
+gamma: 0.999

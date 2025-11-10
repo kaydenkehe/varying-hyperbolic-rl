@@ -1,0 +1,2 @@
+- agent@_global_=onpolicy/ppo
+- env@_global_=gen/climber
