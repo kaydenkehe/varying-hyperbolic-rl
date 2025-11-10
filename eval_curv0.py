@@ -43,7 +43,7 @@ class EvalConfig:
     base_csv: Path = Path("results/results.csv")
     # Write the augmented CSV inside the curv0 directory
     out_csv: Path = Path("results/curv0/results.csv")
-    episodes: int = 100  # default evaluation episodes
+    episodes: int = 1000  # default evaluation episodes
     det: bool = False    # stochastic policy by default (match training)
     force_cpu: bool = False
     prefer_prefix: str = "checkpoint-229"  # prioritize final checkpoints
