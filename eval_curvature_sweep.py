@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
-Evaluate latest checkpoints for a list of curvature settings and write
-per-curvature result tables under results/curv<curv>/results.csv.
+Train (if missing) and evaluate checkpoints for a list of curvature settings
+and write per-curvature result tables under results/curv<curv>/results.csv.
 
 Defaults:
 - Curvature list: 0.1, 0.5, 1.0, 2.0, 5.0 (skip c=0; base results.csv already
   has Euclidean/Hyperbolic columns).
-- Each curvature expects a directory results/curv<curv>/ with env subdirs
-  containing checkpoints; the latest checkpoint is chosen by step, preferring
-  names starting with "checkpoint-229" when present.
+- For c=1, metrics are copied from the existing Hyperbolic PPO columns in
+  results/results.csv (no re-eval/training).
+- For other curvatures, if no checkpoint is found in results/curv<curv>/<env>
+  the script launches training via main_hydra.py with hydra.run.dir set to that
+  env directory (timestamped subdir) and then evaluates the latest checkpoint.
 - Uses each run's saved .hydra/config.yaml to build the model so curvature and
   other overrides are preserved during evaluation.
 - Base table: results/results.csv. This script drops the Percent Change column
@@ -19,8 +21,8 @@ Notes:
 - Outputs one CSV per curvature: results/curv<curv>/results.csv.
 - Also emits a consolidated sweep CSV at results/curvature_sweep.csv if at
   least one curvature produces results.
-- Curvature directories are not created automatically; missing dirs are
-  skipped with a warning.
+- Training can be disabled with --no-train. Set --episodes to match your eval
+  depth (1000 to mirror existing c=1 numbers).
 """
 
 from __future__ import annotations
@@ -28,8 +30,10 @@ from __future__ import annotations
 import csv
 import math
 import re
+import subprocess
 import sys
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -45,11 +49,12 @@ class SweepConfig:
     )
     results_root: Path = Path("results")
     base_csv: Path = Path("results/results.csv")
-    episodes: int = 100
+    episodes: int = 1000
     det: bool = False
     force_cpu: bool = False
     prefer_prefix: str = "checkpoint-229"
     summary_csv: Path = Path("results/curvature_sweep.csv")
+    train_if_missing: bool = True
 
 
 def _summarize(returns: Sequence[float]) -> Tuple[float, float]:
@@ -78,6 +83,34 @@ def _find_latest_checkpoint(env_dir: Path, prefer_prefix: str) -> Optional[Path]
     pool = preferred if preferred else candidates
     pool.sort(key=step_num, reverse=True)
     return pool[0]
+
+
+def _best_run_dir(env_root: Path, prefer_prefix: str) -> Tuple[Optional[Path], Optional[Path]]:
+    """Return (run_dir, best_ckpt) inside env_root."""
+    run_dirs: List[Path] = []
+    for cfg_path in env_root.rglob(".hydra/config.yaml"):
+        run_dirs.append(cfg_path.parent.parent)
+    if not run_dirs:
+        return None, None
+    best_dir: Optional[Path] = None
+    best_ckpt: Optional[Path] = None
+    best_step = -1
+    best_mtime = 0.0
+    for rd in sorted(run_dirs):
+        ckpt = _find_latest_checkpoint(rd, prefer_prefix)
+        if ckpt is not None:
+            m = _CKPT_RE.search(ckpt.name)
+            step = int(m.group(1)) if m else -1
+            mtime = ckpt.stat().st_mtime
+        else:
+            step = -1
+            mtime = rd.stat().st_mtime
+        if step > best_step or (step == best_step and mtime > best_mtime):
+            best_step = step
+            best_mtime = mtime
+            best_dir = rd
+            best_ckpt = ckpt
+    return best_dir, best_ckpt
 
 
 def _load_run_cfg(env_dir: Path) -> Optional[OmegaConf]:
@@ -139,13 +172,12 @@ def _format_curv_label(curv: float) -> str:
     return text or "0"
 
 
-def _env_dirs(root: Path) -> List[Path]:
-    dirs = []
-    if root.is_dir():
-        for p in root.iterdir():
-            if p.is_dir() and (p / ".hydra" / "config.yaml").exists():
-                dirs.append(p)
-    return sorted(dirs)
+def _env_names(base_rows: List[List[str]]) -> List[str]:
+    names: List[str] = []
+    for row in base_rows:
+        if row:
+            names.append(row[0])
+    return names
 
 
 def _drop_percent_change(header: List[str], rows: List[List[str]]) -> Tuple[List[str], List[List[str]]]:
@@ -188,15 +220,34 @@ def _extract_hppo_scores(header: List[str], rows: List[List[str]]) -> Dict[str, 
     return scores
 
 
+def _launch_training(curv: float, env_name: str, env_root: Path) -> Path:
+    run_id = datetime.now().strftime("%Y.%m.%d_%H%M%S")
+    run_dir = env_root / run_id
+    cmd = [
+        sys.executable,
+        "main_hydra.py",
+        "agent@_global_=onpolicy/hyperbolic/ppo",
+        f"env@_global_=gen/{env_name}",
+        f"curvature={curv}",
+        f"hydra.run.dir={run_dir}",
+    ]
+    print(f"[train] Launching: {' '.join(cmd)}")
+    run_dir.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(cmd, check=True)
+    return run_dir
+
+
 def evaluate_curvature(
     curv: float,
     cfg: SweepConfig,
     base_header: List[str],
     base_rows: List[List[str]],
     hppo_scores: Dict[str, Tuple[float, float]],
+    env_names: List[str],
 ) -> Tuple[str, Dict[str, Tuple[float, float]], Path]:
     label = _format_curv_label(curv)
     curv_dir = cfg.results_root / f"curv{label}"
+    curv_dir.mkdir(parents=True, exist_ok=True)
 
     # Special-case c=1: copy from base Hyperbolic PPO columns instead of re-evaluating.
     if math.isclose(curv, 1.0, rel_tol=1e-9, abs_tol=1e-9):
@@ -216,21 +267,30 @@ def evaluate_curvature(
         print(f"Copied c={label} from base results into: {out_path}")
         return label, scores, out_path
 
-    if not curv_dir.exists():
-        print(f"Curvature dir missing for c={label}: {curv_dir} (skipping)")
-        return label, {}, curv_dir / "results.csv"
-
-    env_dirs = _env_dirs(curv_dir)
     scores: Dict[str, Tuple[float, float]] = {}
-    for env_dir in env_dirs:
-        env_name = env_dir.name
-        ckpt = _find_latest_checkpoint(env_dir, cfg.prefer_prefix)
+    for env_name in env_names:
+        env_root = curv_dir / env_name
+        env_root.mkdir(parents=True, exist_ok=True)
+        run_dir, ckpt = _best_run_dir(env_root, cfg.prefer_prefix)
         if ckpt is None:
-            print(f"No checkpoint found in {env_dir} (c={label}); marking NaN.")
+            if cfg.train_if_missing:
+                try:
+                    run_dir = _launch_training(curv, env_name, env_root)
+                except Exception as e:
+                    print(f"[train] Failed for c={label} env={env_name}: {e}")
+                    scores[env_name] = (float("nan"), float("nan"))
+                    continue
+                run_dir, ckpt = _best_run_dir(env_root, cfg.prefer_prefix)
+            else:
+                print(f"No checkpoint found in {env_root} (c={label}); marking NaN.")
+                scores[env_name] = (float("nan"), float("nan"))
+                continue
+        if ckpt is None or run_dir is None:
+            print(f"No checkpoint available after training for {env_name} (c={label}).")
             scores[env_name] = (float("nan"), float("nan"))
             continue
         try:
-            mu, sd = _evaluate_ckpt(env_dir, ckpt, cfg.episodes, cfg.det, cfg.force_cpu)
+            mu, sd = _evaluate_ckpt(run_dir, ckpt, cfg.episodes, cfg.det, cfg.force_cpu)
             print(f"Evaluated c={label} {env_name} @ {ckpt.name}: mean={mu:.3f} std={sd:.3f}")
             scores[env_name] = (mu, sd)
         except Exception as e:
@@ -262,10 +322,11 @@ def run(cfg: SweepConfig) -> None:
     base_header, base_rows = _drop_percent_change(base_header, base_rows)
     hppo_scores = _extract_hppo_scores(base_header, base_rows)
 
+    env_names = _env_names(base_rows)
     sweep_scores: Dict[str, Dict[str, Tuple[float, float]]] = {}
     written_any = False
     for curv in cfg.curvatures:
-        label, scores, out_path = evaluate_curvature(curv, cfg, base_header, base_rows, hppo_scores)
+        label, scores, out_path = evaluate_curvature(curv, cfg, base_header, base_rows, hppo_scores, env_names)
         if scores:
             sweep_scores[label] = scores
             written_any = True
@@ -324,6 +385,8 @@ def _parse_args(argv: List[str]) -> SweepConfig:
         elif arg == "--prefer-prefix":
             i += 1
             cfg.prefer_prefix = argv[i]
+        elif arg == "--no-train":
+            cfg.train_if_missing = False
         else:
             print(f"Warning: unknown arg {arg} (ignored)")
         i += 1
