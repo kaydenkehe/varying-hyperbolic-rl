@@ -47,13 +47,14 @@ class SweepConfig:
     curvatures: List[float] = field(
         default_factory=lambda: [0.1, 0.5, 1.0, 2.0, 5.0]
     )
-    results_root: Path = Path("results")
+    # Where new curvature runs and CSVs are stored
+    results_root: Path = Path("results_par")
     base_csv: Path = Path("results/results.csv")
     episodes: int = 1000
     det: bool = False
     force_cpu: bool = False
     prefer_prefix: str = "checkpoint-229"
-    summary_csv: Path = Path("results/curvature_sweep.csv")
+    summary_csv: Path = Path("results_par/curvature_sweep.csv")
     train_if_missing: bool = True
 
 
