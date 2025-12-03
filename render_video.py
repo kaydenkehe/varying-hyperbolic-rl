@@ -52,9 +52,9 @@ def _load_cfg(run_dir: Path, force_cpu: bool, episodes: int) -> OmegaConf:
     if not cfg_path.exists():
         raise FileNotFoundError(f"Missing Hydra config: {cfg_path}")
     cfg = OmegaConf.load(cfg_path)
-    cfg = OmegaConf.create(OmegaConf.to_container(cfg, resolve=True))
-    cfg["disable_cuda"] = bool(force_cpu)
-    cfg["n_eval_envs"] = int(episodes)
+    # Apply lightweight overrides without resolving all interpolations.
+    cfg.disable_cuda = bool(force_cpu)
+    cfg.n_eval_envs = int(episodes)
     # For video, force single env and rgb_array rendering
     cfg.env.num = 1
     cfg.eval_env.num = 1
