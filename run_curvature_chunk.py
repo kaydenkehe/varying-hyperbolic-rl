@@ -7,18 +7,18 @@ environments used in results/results.csv:
 Curvatures (fixed order): [0.1, 0.5, 1.0, 2.0, 5.0]
 
 Chunk mapping (assuming 8 tasks in results/results.csv):
-  1 → c=0.1, first  4 envs
-  2 → c=0.1, second 4 envs
-  3 → c=0.5, first  4 envs
-  4 → c=0.5, second 4 envs
-  5 → c=1.0, first  4 envs (no training; c=1 copied from base table)
-  6 → c=1.0, second 4 envs (no training)
-  7 → c=2.0, first  4 envs
-  8 → c=2.0, second 4 envs
-  9 → c=5.0, first  4 envs
- 10 → c=5.0, second 4 envs
+  1 -> c=0.1, first  4 envs
+  2 -> c=0.1, second 4 envs
+  3 -> c=0.5, first  4 envs
+  4 -> c=0.5, second 4 envs
+  5 -> c=1.0, first  4 envs (no training; c=1 copied from base table)
+  6 -> c=1.0, second 4 envs (no training)
+  7 -> c=2.0, first  4 envs
+  8 -> c=2.0, second 4 envs
+  9 -> c=5.0, first  4 envs
+ 10 -> c=5.0, second 4 envs
 
-For c≠1, the script:
+For c!=1, the script:
 - Ensures a run exists under results/curv<curv>/<env>/<timestamp>/
   (launching training via main_hydra.py if needed), and
 - Evaluates the latest checkpoint for the requested number of episodes,
