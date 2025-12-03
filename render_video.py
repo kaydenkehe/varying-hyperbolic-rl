@@ -64,9 +64,19 @@ def _load_cfg(run_dir: Path, force_cpu: bool, episodes: int) -> OmegaConf:
 
 def _frames_to_video(frames: Sequence[np.ndarray], out_path: Path, fps: int) -> None:
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    with imageio.get_writer(out_path, fps=fps, codec="h264") as writer:
-        for frame in frames:
-            writer.append_data(frame)
+    try:
+        # Prefer mp4/ffmpeg when available
+        with imageio.get_writer(out_path, fps=fps, codec="h264") as writer:
+            for frame in frames:
+                writer.append_data(frame)
+    except TypeError as e:
+        # Fallback: write a GIF instead if ffmpeg/imageio-ffmpeg are incompatible.
+        alt_path = out_path.with_suffix(".gif")
+        imageio.mimsave(alt_path, list(frames), fps=fps)
+        print(
+            f"Warning: failed to write MP4 via ffmpeg ({e}); "
+            f"wrote GIF instead at {alt_path}"
+        )
 
 
 def render_episode(run_dir: Path, ckpt_path: Optional[Path], out_path: Optional[Path], episodes: int, fps: int, det: bool, force_cpu: bool) -> Path:
