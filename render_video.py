@@ -80,6 +80,12 @@ def render_episode(run_dir: Path, ckpt_path: Optional[Path], out_path: Optional[
     loaded_preproc = agent.load(str(ckpt_path))
     if loaded_preproc is not None:
         preproc = loaded_preproc
+    # Ensure preprocessor uses the same device as the agent/model
+    if hasattr(cfg, "device"):
+        try:
+            preproc.device = cfg.device
+        except Exception:
+            pass
 
     # Fresh eval env with rendering
     import hydra
