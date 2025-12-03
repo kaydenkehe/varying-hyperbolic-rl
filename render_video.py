@@ -120,10 +120,7 @@ def render_episode(run_dir: Path, ckpt_path: Optional[Path], out_path: Optional[
 
     env_name = getattr(cfg, "env_name", "env")
     # Some older configs may not have a top-level curvature field; fall back to 1.
-    try:
-        curv_val = cfg.curvature  # type: ignore[attr-defined]
-    except Exception:
-        curv_val = 1.0
+    curv_val = cfg.get("curvature", 1.0)
     label = f"c{curv_val}"
     if out_path is None:
         out_path = Path("results") / "videos" / f"{env_name}_{label}.mp4"
